@@ -1,5 +1,7 @@
 # rebuild pass
 export LLVMDIR=export LLVM_DIR=/usr/lib/llvm-19
+rm -rf build
+mkdir build
 cd build
 cmake -DLT_LLVM_INSTALL_DIR=$LLVM_DIR ..
 make

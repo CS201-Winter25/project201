@@ -1,7 +1,7 @@
 lib/CMakeFiles/InjectFuncCall.dir/InjectFuncCall.cpp.o: \
- /home/shr/Documents/llvm-tutor/lib/InjectFuncCall.cpp \
+ /home/shr/Documents/project201/lib/InjectFuncCall.cpp \
  /usr/include/stdc-predef.h \
- /home/shr/Documents/llvm-tutor/lib/../include/InjectFuncCall.h \
+ /home/shr/Documents/project201/lib/../include/InjectFuncCall.h \
  /usr/include/llvm-19/llvm/IR/Module.h \
  /usr/include/llvm-c-19/llvm-c/Types.h \
  /usr/include/llvm-c-19/llvm-c/DataTypes.h /usr/include/inttypes.h \

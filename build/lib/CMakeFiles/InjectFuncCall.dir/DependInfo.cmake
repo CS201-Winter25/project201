@@ -8,7 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/shr/Documents/llvm-tutor/lib/InjectFuncCall.cpp" "lib/CMakeFiles/InjectFuncCall.dir/InjectFuncCall.cpp.o" "gcc" "lib/CMakeFiles/InjectFuncCall.dir/InjectFuncCall.cpp.o.d"
+  "/home/shr/Documents/project201/lib/InjectFuncCall.cpp" "lib/CMakeFiles/InjectFuncCall.dir/InjectFuncCall.cpp.o" "gcc" "lib/CMakeFiles/InjectFuncCall.dir/InjectFuncCall.cpp.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

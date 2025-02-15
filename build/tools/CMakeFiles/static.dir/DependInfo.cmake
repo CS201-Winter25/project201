@@ -8,8 +8,8 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/shr/Documents/llvm-tutor/tools/StaticMain.cpp" "tools/CMakeFiles/static.dir/StaticMain.cpp.o" "gcc" "tools/CMakeFiles/static.dir/StaticMain.cpp.o.d"
-  "/home/shr/Documents/llvm-tutor/lib/StaticCallCounter.cpp" "tools/CMakeFiles/static.dir/__/lib/StaticCallCounter.cpp.o" "gcc" "tools/CMakeFiles/static.dir/__/lib/StaticCallCounter.cpp.o.d"
+  "/home/shr/Documents/project201/tools/StaticMain.cpp" "tools/CMakeFiles/static.dir/StaticMain.cpp.o" "gcc" "tools/CMakeFiles/static.dir/StaticMain.cpp.o.d"
+  "/home/shr/Documents/project201/lib/StaticCallCounter.cpp" "tools/CMakeFiles/static.dir/__/lib/StaticCallCounter.cpp.o" "gcc" "tools/CMakeFiles/static.dir/__/lib/StaticCallCounter.cpp.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

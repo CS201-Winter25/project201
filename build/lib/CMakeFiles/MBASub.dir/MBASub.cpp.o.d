@@ -1,6 +1,6 @@
 lib/CMakeFiles/MBASub.dir/MBASub.cpp.o: \
- /home/shr/Documents/llvm-tutor/lib/MBASub.cpp /usr/include/stdc-predef.h \
- /home/shr/Documents/llvm-tutor/lib/../include/MBASub.h \
+ /home/shr/Documents/project201/lib/MBASub.cpp /usr/include/stdc-predef.h \
+ /home/shr/Documents/project201/lib/../include/MBASub.h \
  /usr/include/llvm-19/llvm/IR/BasicBlock.h \
  /usr/include/llvm-c-19/llvm-c/Types.h \
  /usr/include/llvm-c-19/llvm-c/DataTypes.h /usr/include/inttypes.h \

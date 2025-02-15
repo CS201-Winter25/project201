@@ -32,26 +32,10 @@ using namespace llvm;
 // everything in an anonymous namespace.
 namespace {
 
-// This method implements what the pass does
 void visitor(Function &fn) {
-    auto functionName = fn.getName();
-    auto argCount = fn.arg_size();
-
-    for (BasicBlock& basicBlock : fn){
-        for (Instruction& inst : basicBlock) {
-            errs() << inst << "\n";
-
-            if(Instruction::Add == inst.getOpcode()) {
-                Value *op0 = inst.getOperand(0);
-                Value *op1 = inst.getOperand(1);
-                //         dst              lhs             rhs
-                errs() << &inst << " = " << op0 << " + " << op1 << "\n";
-            }
-
-            else if(Instruction::Load == inst.getOperand()) {
-                // 
-                errs() << &inst << 
-            }
+    for (auto& basicBlock : fn) {
+        for (auto& instruction : basicBlock) {
+            errs() << instruction << "\n";
         }
     }
 }

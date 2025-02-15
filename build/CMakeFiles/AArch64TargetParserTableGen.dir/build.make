@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/shr/Documents/llvm-tutor
+CMAKE_SOURCE_DIR = /home/shr/Documents/project201
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/shr/Documents/llvm-tutor/build
+CMAKE_BINARY_DIR = /home/shr/Documents/project201/build
 
 # Utility rule file for AArch64TargetParserTableGen.
 
@@ -78,6 +78,6 @@ CMakeFiles/AArch64TargetParserTableGen.dir/clean:
 .PHONY : CMakeFiles/AArch64TargetParserTableGen.dir/clean
 
 CMakeFiles/AArch64TargetParserTableGen.dir/depend:
-	cd /home/shr/Documents/llvm-tutor/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/shr/Documents/llvm-tutor /home/shr/Documents/llvm-tutor /home/shr/Documents/llvm-tutor/build /home/shr/Documents/llvm-tutor/build /home/shr/Documents/llvm-tutor/build/CMakeFiles/AArch64TargetParserTableGen.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /home/shr/Documents/project201/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/shr/Documents/project201 /home/shr/Documents/project201 /home/shr/Documents/project201/build /home/shr/Documents/project201/build /home/shr/Documents/project201/build/CMakeFiles/AArch64TargetParserTableGen.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/AArch64TargetParserTableGen.dir/depend
 
