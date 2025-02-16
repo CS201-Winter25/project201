@@ -33,6 +33,22 @@ using namespace llvm;
 namespace {
 
 void visitor(Function &fn) {
+    // Map to store value numbers for each value
+    std::map<Value*, int> valueNumberMap;
+    // Map to store expressions and their value numbers
+    std::map<std::string, int> exprNumberMap;
+    int nextValueNumber = 1;
+
+    // Helper function to get or assign a value number
+    auto getValueNumber = [&](Value* value) -> int {
+        if (valueNumberMap.find(value) == valueNumberMap.end()) {
+            // For constants and arguments, assign new value numbers
+            if (isa<Constant>(value) || isa<Argument>(value)) {
+                valueNumberMap[value] = nextValueNumber++;
+            }
+        }
+        return valueNumberMap[value];
+    };
     for (auto& basicBlock : fn) {
         for (auto& instruction : basicBlock) {
             errs() << instruction << "\n";
