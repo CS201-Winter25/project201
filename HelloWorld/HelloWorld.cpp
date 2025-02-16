@@ -49,6 +49,18 @@ void visitor(Function &fn) {
         }
         return valueNumberMap[value];
     };
+
+    // Helper function to create expression string
+    auto getExprString = [&](std::string opcode, Value* op1, Value* op2) -> std::string {
+        int vn1 = getValueNumber(op1);
+        int vn2 = getValueNumber(op2);
+        // Normalize expression by ordering operands
+        if (vn1 > vn2) {
+            std::swap(vn1, vn2);
+        }
+        return opcode + " " + std::to_string(vn1) + " " + std::to_string(vn2);
+    };
+    
     for (auto& basicBlock : fn) {
         for (auto& instruction : basicBlock) {
             errs() << instruction << "\n";
