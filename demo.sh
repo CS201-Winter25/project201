@@ -9,8 +9,8 @@ make
 # move to example file
 cd ..
 
-# convert input.c to input.bc
-clang-19 -c -emit-llvm -fno-discard-value-names -O0 demo.c -o demo.bc
+# convert input.c to input.b
+clang-19 -c -emit-llvm -fno-discard-value-names -O0 test.c -o test.bc
 
 # run with the pass
-opt-19 -load-pass-plugin build/lib/libHelloWorld.so -passes=hello-world -disable-output demo.bc
+opt-19 -load-pass-plugin build/lib/libHelloWorld.so -passes=hello-world -disable-output test.bc

@@ -60,13 +60,57 @@ void visitor(Function &fn) {
         }
         return opcode + " " + std::to_string(vn1) + " " + std::to_string(vn2);
     };
-    
+
     for (auto& basicBlock : fn) {
+        errs() << "ValueNumbering: " << fn.getName() << "\n";
+        
         for (auto& instruction : basicBlock) {
             errs() << instruction << "\n";
+            
+            if (auto* storeInst = dyn_cast<StoreInst>(&instruction)) {
+                // For store instructions, propagate the value number
+                Value* storedValue = storeInst->getValueOperand();
+                Value* pointer = storeInst->getPointerOperand();
+                int valueNum = getValueNumber(storedValue);
+                valueNumberMap[pointer] = valueNum;
+                errs() << "    " << valueNum << " = " << valueNum << "\n";
+            }
+            else if (auto* loadInst = dyn_cast<LoadInst>(&instruction)) {
+                // For load instructions, use the pointer's value number
+                Value* pointer = loadInst->getPointerOperand();
+                if (valueNumberMap.find(pointer) != valueNumberMap.end()) {
+                    valueNumberMap[&instruction] = valueNumberMap[pointer];
+                    errs() << "    " << valueNumberMap[&instruction] << " = " 
+                        << valueNumberMap[pointer] << "\n";
+                }
+            }
+            else if (auto* binOp = dyn_cast<BinaryOperator>(&instruction)) {
+                Value* op1 = binOp->getOperand(0);
+                Value* op2 = binOp->getOperand(1);
+                
+                // Create expression string based on operation and operands
+                std::string exprString = getExprString(binOp->getOpcodeName(), op1, op2);
+                
+                // Check if this expression has been computed before
+                if (exprNumberMap.find(exprString) != exprNumberMap.end()) {
+                    // Redundant computation found
+                    valueNumberMap[&instruction] = exprNumberMap[exprString];
+                    errs() << "    " << valueNumberMap[&instruction] << " = "
+                        << getValueNumber(op1) << " " << binOp->getOpcodeName() << " "
+                        << getValueNumber(op2) << " (redundant)\n";
+                } else {
+                    // New computation
+                    valueNumberMap[&instruction] = nextValueNumber;
+                    exprNumberMap[exprString] = nextValueNumber++;
+                    errs() << "    " << valueNumberMap[&instruction] << " = "
+                        << getValueNumber(op1) << " " << binOp->getOpcodeName() << " "
+                        << getValueNumber(op2) << "\n";
+                }
+            }
         }
     }
 }
+
 
 // New PM implementation
 struct HelloWorld : PassInfoMixin<HelloWorld> {
