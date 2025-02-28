@@ -1,4 +1,4 @@
-# Install script for directory: /home/shr/Documents/project201/lib
+# Install script for directory: /home/shr/Documents/temp/project201/lib
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

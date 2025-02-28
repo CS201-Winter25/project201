@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/shr/Documents/project201
+CMAKE_SOURCE_DIR = /home/shr/Documents/temp/project201
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/shr/Documents/project201/build
+CMAKE_BINARY_DIR = /home/shr/Documents/temp/project201/build
 
 # Utility rule file for ARMTargetParserTableGen.
 
@@ -78,6 +78,6 @@ CMakeFiles/ARMTargetParserTableGen.dir/clean:
 .PHONY : CMakeFiles/ARMTargetParserTableGen.dir/clean
 
 CMakeFiles/ARMTargetParserTableGen.dir/depend:
-	cd /home/shr/Documents/project201/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/shr/Documents/project201 /home/shr/Documents/project201 /home/shr/Documents/project201/build /home/shr/Documents/project201/build /home/shr/Documents/project201/build/CMakeFiles/ARMTargetParserTableGen.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /home/shr/Documents/temp/project201/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/shr/Documents/temp/project201 /home/shr/Documents/temp/project201 /home/shr/Documents/temp/project201/build /home/shr/Documents/temp/project201/build /home/shr/Documents/temp/project201/build/CMakeFiles/ARMTargetParserTableGen.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/ARMTargetParserTableGen.dir/depend
 

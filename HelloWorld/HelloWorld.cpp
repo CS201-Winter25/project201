@@ -33,98 +33,96 @@ using namespace llvm;
 // everything in an anonymous namespace.
 namespace {
 
-void visitor(Function &fn) {
-    // Map to store value numbers for each value
-    std::map<Value*, int> valueNumberMap;
-    // Map to store expressions and their value numbers
-    std::map<std::string, int> exprNumberMap;
-    int nextValueNumber = 1;
-
-    // Helper function to get or assign a value number
-    auto getValueNumber = [&](Value* value) -> int {
-        if (valueNumberMap.find(value) == valueNumberMap.end()) {
-            // For constants and arguments, assign new value numbers
-            if (isa<Constant>(value) || isa<Argument>(value)) {
-                valueNumberMap[value] = nextValueNumber++;
+    void visitor(Function &fn) {
+        errs() << "Liveness Analysis: " << fn.getName() << "\n";
+    
+        // Data structures for analysis
+        std::map<BasicBlock*, std::set<Value*>> UEVAR;
+        std::map<BasicBlock*, std::set<Value*>> VARKILL;
+        std::map<BasicBlock*, std::set<Value*>> LIVEOUT;
+    
+        // Step 1: Calculate UEVAR and VARKILL for each basic block
+        for (auto& basicBlock : fn) {
+            std::set<Value*> uevarSet;
+            std::set<Value*> varkillSet;
+    
+            for (auto& instruction : basicBlock) {
+                // Iterate over operands to find uses
+                for (unsigned i = 0; i < instruction.getNumOperands(); ++i) {
+                    Value* operand = instruction.getOperand(i);
+    
+                    // If the operand is not defined in this block, it's UEVAR
+                    if (!varkillSet.count(operand)) {
+                        uevarSet.insert(operand);
+                    }
+                }
+    
+                // Defined variables go to VARKILL
+                if (!instruction.getType()->isVoidTy()) {
+                    varkillSet.insert(&instruction);
+                }
+            }
+    
+            UEVAR[&basicBlock] = uevarSet;
+            VARKILL[&basicBlock] = varkillSet;
+        }
+    
+        // Step 2: Iteratively calculate LIVEOUT using worklist
+        bool changed = true;
+        while (changed) {
+            changed = false;
+    
+            for (auto& basicBlock : fn) {
+                std::set<Value*> liveOutSet;
+    
+                // Collect LIVEOUT from successors
+                for (auto succ = succ_begin(&basicBlock); succ != succ_end(&basicBlock); ++succ) {
+                    BasicBlock* succBlock = *succ;
+    
+                    // LIVEOUT = (LIVEOUT - VARKILL) U UEVAR
+                    std::set<Value*> tempOut = LIVEOUT[succBlock];
+                    for (auto v : VARKILL[succBlock]) {
+                        tempOut.erase(v);
+                    }
+                    liveOutSet.insert(tempOut.begin(), tempOut.end());
+                    liveOutSet.insert(UEVAR[succBlock].begin(), UEVAR[succBlock].end());
+                }
+    
+                // Check if LIVEOUT changed
+                if (LIVEOUT[&basicBlock] != liveOutSet) {
+                    LIVEOUT[&basicBlock] = liveOutSet;
+                    changed = true;
+                }
             }
         }
-        return valueNumberMap[value];
-    };
-
-    // Helper function to create expression string
-    auto getExprString = [&](std::string opcode, Value* op1, Value* op2) -> std::string {
-        int vn1 = getValueNumber(op1);
-        int vn2 = getValueNumber(op2);
-        return opcode + " " + std::to_string(vn1) + " " + std::to_string(vn2);
-    };
-
-    for (auto& basicBlock : fn) {
-        errs() << "ValueNumbering: " << fn.getName() << "\n";
-        
-        for (auto& instruction : basicBlock) {
-            // Skip alloca and return instructions
-            if (isa<AllocaInst>(&instruction) || isa<ReturnInst>(&instruction)) {
-                continue;
+    
+        // Step 3: Print UEVAR, VARKILL, and LIVEOUT for each block
+        for (auto& basicBlock : fn) {
+            errs() << "----- " << basicBlock.getName() << " -----\n";
+    
+            // Print UEVAR
+            errs() << "UEVAR: ";
+            for (auto v : UEVAR[&basicBlock]) {
+                errs() << v->getName() << " ";
             }
-
-            std::string instStr;
-            raw_string_ostream SS(instStr);
-            instruction.print(SS);
-            SS.flush();
-
-            // Replace "ptr" with "i32*" in the instruction string
-            size_t pos = instStr.find("ptr");
-            while (pos != std::string::npos) {
-                instStr.replace(pos, 3, "i32*");
-                pos = instStr.find("ptr", pos + 4);
+            errs() << "\n";
+    
+            // Print VARKILL
+            errs() << "VARKILL: ";
+            for (auto v : VARKILL[&basicBlock]) {
+                errs() << v->getName() << " ";
             }
-
-            if (auto* storeInst = dyn_cast<StoreInst>(&instruction)) {
-                Value* storedValue = storeInst->getValueOperand();
-                Value* pointer = storeInst->getPointerOperand();
-                int valueNum = getValueNumber(storedValue);
-                valueNumberMap[pointer] = valueNum;
-                
-                while (instStr.length() < 50) instStr += " ";
-                errs() << instStr << valueNum << " = " << valueNum << "\n";
+            errs() << "\n";
+    
+            // Print LIVEOUT
+            errs() << "LIVEOUT: ";
+            for (auto v : LIVEOUT[&basicBlock]) {
+                errs() << v->getName() << " ";
             }
-            else if (auto* loadInst = dyn_cast<LoadInst>(&instruction)) {
-                Value* pointer = loadInst->getPointerOperand();
-                if (valueNumberMap.find(pointer) != valueNumberMap.end()) {
-                    valueNumberMap[&instruction] = valueNumberMap[pointer];
-                    
-                    while (instStr.length() < 50) instStr += " ";
-                    errs() << instStr << valueNumberMap[&instruction] 
-                          << " = " << valueNumberMap[pointer] << "\n";
-                }
-            }
-            else if (auto* binOp = dyn_cast<BinaryOperator>(&instruction)) {
-                Value* op1 = binOp->getOperand(0);
-                Value* op2 = binOp->getOperand(1);
-                
-                std::string exprString = getExprString(binOp->getOpcodeName(), op1, op2);
-                
-                while (instStr.length() < 50) instStr += " ";
-                
-                if (exprNumberMap.find(exprString) != exprNumberMap.end()) {
-                    // Redundant computation
-                    valueNumberMap[&instruction] = exprNumberMap[exprString];
-                    errs() << instStr << valueNumberMap[&instruction] 
-                          << " = " << getValueNumber(op1) << " " 
-                          << binOp->getOpcodeName() << " " << getValueNumber(op2) 
-                          << " (redundant)\n";
-                } else {
-                    // New computation
-                    valueNumberMap[&instruction] = nextValueNumber;
-                    exprNumberMap[exprString] = nextValueNumber++;
-                    errs() << instStr << valueNumberMap[&instruction] 
-                          << " = " << getValueNumber(op1) << " " 
-                          << binOp->getOpcodeName() << " " << getValueNumber(op2) << "\n";
-                }
-            }
+            errs() << "\n";
         }
     }
-}
+    
 
 // New PM implementation
 struct HelloWorld : PassInfoMixin<HelloWorld> {
