@@ -34,114 +34,130 @@ using namespace llvm;
 namespace {
 
     void visitor(Function &fn) {
-    errs() << "Liveness Analysis: " << fn.getName() << "\n";
-
-    // Data structures for analysis
-    std::map<BasicBlock*, std::set<std::string>> UEVAR;
-    std::map<BasicBlock*, std::set<std::string>> VARKILL;
-    std::map<BasicBlock*, std::set<std::string>> LIVEOUT;
-
-    // Step 1: Calculate UEVAR and VARKILL for each basic block
-    for (auto& basicBlock : fn) {
-        std::set<std::string> uevarSet;
-        std::set<std::string> varkillSet;
-
-        for (auto& instruction : basicBlock) {
-            // Handle Store Instructions (Defining Variables)
-            if (auto* storeInst = dyn_cast<StoreInst>(&instruction)) {
-                Value* storedValue = storeInst->getValueOperand();
-                Value* pointer = storeInst->getPointerOperand();
-
-                // Check if the pointer is a named variable
-                if (pointer->hasName()) {
-                    std::string varName = pointer->getName().str();
-                    varkillSet.insert(varName);
-                }
-
-                // Check if the stored value is a named variable (UEVAR case)
-                if (storedValue->hasName()) {
-                    std::string varName = storedValue->getName().str();
-                    // Only UEVAR if not killed in this block
-                    if (varkillSet.find(varName) == varkillSet.end()) {
-                        uevarSet.insert(varName);
-                    }
-                }
-            }
-            // Handle Load Instructions (Using Variables)
-            else if (auto* loadInst = dyn_cast<LoadInst>(&instruction)) {
-                Value* pointer = loadInst->getPointerOperand();
-                if (pointer->hasName()) {
-                    std::string varName = pointer->getName().str();
-                    // Only UEVAR if not killed in this block
-                    if (varkillSet.find(varName) == varkillSet.end()) {
-                        uevarSet.insert(varName);
-                    }
-                }
-            }
-        }
-
-        UEVAR[&basicBlock] = uevarSet;
-        VARKILL[&basicBlock] = varkillSet;
-    }
-
-    // Step 2: Iteratively calculate LIVEOUT using worklist
-    bool changed = true;
-    while (changed) {
-        changed = false;
-
+        errs() << "Liveness Analysis: " << fn.getName() << "\n";
+    
+        // Map to track pointers to variable names
+        std::map<Value*, std::string> pointerToVarName;
+        
+        // Data structures for analysis
+        std::map<BasicBlock*, std::set<std::string>> UEVAR;
+        std::map<BasicBlock*, std::set<std::string>> VARKILL;
+        std::map<BasicBlock*, std::set<std::string>> LIVEOUT;
+    
+        // Step 1: Map pointers to variable names
         for (auto& basicBlock : fn) {
-            std::set<std::string> liveOutSet;
-
-            // Collect LIVEOUT from successors
-            for (auto succ = succ_begin(&basicBlock); succ != succ_end(&basicBlock); ++succ) {
-                BasicBlock* succBlock = *succ;
-
-                // LIVEOUT = (LIVEOUT - VARKILL) U UEVAR
-                std::set<std::string> tempOut = LIVEOUT[succBlock];
-                
-                // Remove VARKILL
-                for (auto v : VARKILL[succBlock]) {
-                    tempOut.erase(v);
+            for (auto& instruction : basicBlock) {
+                // Track pointers created by alloca (e.g., int a, b, c, e)
+                if (auto* allocaInst = dyn_cast<AllocaInst>(&instruction)) {
+                    if (allocaInst->hasName()) {
+                        pointerToVarName[allocaInst] = allocaInst->getName().str();
+                    }
                 }
-                // Add UEVAR
-                liveOutSet.insert(tempOut.begin(), tempOut.end());
-                liveOutSet.insert(UEVAR[succBlock].begin(), UEVAR[succBlock].end());
-            }
-
-            // Check if LIVEOUT changed
-            if (LIVEOUT[&basicBlock] != liveOutSet) {
-                LIVEOUT[&basicBlock] = liveOutSet;
-                changed = true;
             }
         }
+    
+        // Step 2: Calculate UEVAR and VARKILL for each basic block
+        for (auto& basicBlock : fn) {
+            std::set<std::string> uevarSet;
+            std::set<std::string> varkillSet;
+    
+            for (auto& instruction : basicBlock) {
+                // Handle Store Instructions (Defining Variables)
+                if (auto* storeInst = dyn_cast<StoreInst>(&instruction)) {
+                    Value* storedValue = storeInst->getValueOperand();
+                    Value* pointer = storeInst->getPointerOperand();
+    
+                    // If the pointer is a named variable
+                    if (pointerToVarName.find(pointer) != pointerToVarName.end()) {
+                        std::string varName = pointerToVarName[pointer];
+                        varkillSet.insert(varName);
+                    }
+    
+                    // Check if the stored value is a named variable (UEVAR case)
+                    if (storedValue->hasName()) {
+                        std::string varName = storedValue->getName().str();
+                        // Only UEVAR if not killed in this block
+                        if (varkillSet.find(varName) == varkillSet.end()) {
+                            uevarSet.insert(varName);
+                        }
+                    }
+                }
+                // Handle Load Instructions (Using Variables)
+                else if (auto* loadInst = dyn_cast<LoadInst>(&instruction)) {
+                    Value* pointer = loadInst->getPointerOperand();
+                    if (pointerToVarName.find(pointer) != pointerToVarName.end()) {
+                        std::string varName = pointerToVarName[pointer];
+                        // Only UEVAR if not killed in this block
+                        if (varkillSet.find(varName) == varkillSet.end()) {
+                            uevarSet.insert(varName);
+                        }
+                    }
+                }
+            }
+    
+            UEVAR[&basicBlock] = uevarSet;
+            VARKILL[&basicBlock] = varkillSet;
+        }
+    
+        // Step 3: Iteratively calculate LIVEOUT using worklist
+        bool changed = true;
+        while (changed) {
+            changed = false;
+    
+            for (auto& basicBlock : fn) {
+                std::set<std::string> liveOutSet;
+    
+                // Collect LIVEOUT from successors
+                for (auto succ = succ_begin(&basicBlock); succ != succ_end(&basicBlock); ++succ) {
+                    BasicBlock* succBlock = *succ;
+    
+                    // LIVEOUT = (LIVEOUT - VARKILL) U UEVAR
+                    std::set<std::string> tempOut = LIVEOUT[succBlock];
+                    
+                    // Remove VARKILL
+                    for (auto v : VARKILL[succBlock]) {
+                        tempOut.erase(v);
+                    }
+                    // Add UEVAR
+                    liveOutSet.insert(tempOut.begin(), tempOut.end());
+                    liveOutSet.insert(UEVAR[succBlock].begin(), UEVAR[succBlock].end());
+                }
+    
+                // Check if LIVEOUT changed
+                if (LIVEOUT[&basicBlock] != liveOutSet) {
+                    LIVEOUT[&basicBlock] = liveOutSet;
+                    changed = true;
+                }
+            }
+        }
+    
+        // Step 4: Print UEVAR, VARKILL, and LIVEOUT for each block
+        for (auto& basicBlock : fn) {
+            errs() << "----- " << basicBlock.getName() << " -----\n";
+    
+            // Print UEVAR
+            errs() << "UEVAR: ";
+            for (const auto& v : UEVAR[&basicBlock]) {
+                errs() << v << " ";
+            }
+            errs() << "\n";
+    
+            // Print VARKILL
+            errs() << "VARKILL: ";
+            for (const auto& v : VARKILL[&basicBlock]) {
+                errs() << v << " ";
+            }
+            errs() << "\n";
+    
+            // Print LIVEOUT
+            errs() << "LIVEOUT: ";
+            for (const auto& v : LIVEOUT[&basicBlock]) {
+                errs() << v << " ";
+            }
+            errs() << "\n";
+        }
     }
-
-    // Step 3: Print UEVAR, VARKILL, and LIVEOUT for each block
-    for (auto& basicBlock : fn) {
-        errs() << "----- " << basicBlock.getName() << " -----\n";
-
-        // Print UEVAR
-        errs() << "UEVAR: ";
-        for (const auto& v : UEVAR[&basicBlock]) {
-            errs() << v << " ";
-        }
-        errs() << "\n";
-
-        // Print VARKILL
-        errs() << "VARKILL: ";
-        for (const auto& v : VARKILL[&basicBlock]) {
-            errs() << v << " ";
-        }
-        errs() << "\n";
-
-        // Print LIVEOUT
-        errs() << "LIVEOUT: ";
-        for (const auto& v : LIVEOUT[&basicBlock]) {
-            errs() << v << " ";
-        }
-        errs() << "\n";
-    }
-}
+    
     
     
 
