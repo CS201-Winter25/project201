@@ -37,29 +37,37 @@ namespace {
         errs() << "Liveness Analysis: " << fn.getName() << "\n";
     
         // Data structures for analysis
-        std::map<BasicBlock*, std::set<Value*>> UEVAR;
-        std::map<BasicBlock*, std::set<Value*>> VARKILL;
-        std::map<BasicBlock*, std::set<Value*>> LIVEOUT;
+        std::map<BasicBlock*, std::set<std::string>> UEVAR;
+        std::map<BasicBlock*, std::set<std::string>> VARKILL;
+        std::map<BasicBlock*, std::set<std::string>> LIVEOUT;
     
         // Step 1: Calculate UEVAR and VARKILL for each basic block
         for (auto& basicBlock : fn) {
-            std::set<Value*> uevarSet;
-            std::set<Value*> varkillSet;
+            std::set<std::string> uevarSet;
+            std::set<std::string> varkillSet;
     
             for (auto& instruction : basicBlock) {
-                // Iterate over operands to find uses
+                // Skip void type instructions (e.g., stores)
+                if (instruction.getType()->isVoidTy()) continue;
+    
+                // Defined variable
+                if (instruction.hasName()) {
+                    std::string defVar = instruction.getName().str();
+                    varkillSet.insert(defVar);
+                }
+    
+                // Check all operands (used variables)
                 for (unsigned i = 0; i < instruction.getNumOperands(); ++i) {
                     Value* operand = instruction.getOperand(i);
     
-                    // If the operand is not defined in this block, it's UEVAR
-                    if (!varkillSet.count(operand)) {
-                        uevarSet.insert(operand);
+                    // If the operand is a named variable
+                    if (operand->hasName()) {
+                        std::string varName = operand->getName().str();
+                        // If not already killed in this block, it's UEVAR
+                        if (varkillSet.find(varName) == varkillSet.end()) {
+                            uevarSet.insert(varName);
+                        }
                     }
-                }
-    
-                // Defined variables go to VARKILL
-                if (!instruction.getType()->isVoidTy()) {
-                    varkillSet.insert(&instruction);
                 }
             }
     
@@ -73,17 +81,20 @@ namespace {
             changed = false;
     
             for (auto& basicBlock : fn) {
-                std::set<Value*> liveOutSet;
+                std::set<std::string> liveOutSet;
     
                 // Collect LIVEOUT from successors
                 for (auto succ = succ_begin(&basicBlock); succ != succ_end(&basicBlock); ++succ) {
                     BasicBlock* succBlock = *succ;
     
                     // LIVEOUT = (LIVEOUT - VARKILL) U UEVAR
-                    std::set<Value*> tempOut = LIVEOUT[succBlock];
+                    std::set<std::string> tempOut = LIVEOUT[succBlock];
+                    
+                    // Remove VARKILL
                     for (auto v : VARKILL[succBlock]) {
                         tempOut.erase(v);
                     }
+                    // Add UEVAR
                     liveOutSet.insert(tempOut.begin(), tempOut.end());
                     liveOutSet.insert(UEVAR[succBlock].begin(), UEVAR[succBlock].end());
                 }
@@ -102,26 +113,27 @@ namespace {
     
             // Print UEVAR
             errs() << "UEVAR: ";
-            for (auto v : UEVAR[&basicBlock]) {
-                errs() << v->getName() << " ";
+            for (const auto& v : UEVAR[&basicBlock]) {
+                errs() << v << " ";
             }
             errs() << "\n";
     
             // Print VARKILL
             errs() << "VARKILL: ";
-            for (auto v : VARKILL[&basicBlock]) {
-                errs() << v->getName() << " ";
+            for (const auto& v : VARKILL[&basicBlock]) {
+                errs() << v << " ";
             }
             errs() << "\n";
     
             // Print LIVEOUT
             errs() << "LIVEOUT: ";
-            for (auto v : LIVEOUT[&basicBlock]) {
-                errs() << v->getName() << " ";
+            for (const auto& v : LIVEOUT[&basicBlock]) {
+                errs() << v << " ";
             }
             errs() << "\n";
         }
     }
+    
     
 
 // New PM implementation
