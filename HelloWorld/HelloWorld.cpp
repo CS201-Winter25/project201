@@ -36,20 +36,20 @@ namespace {
     void visitor(Function &fn) {
         errs() << "Liveness Analysis: " << fn.getName() << "\n";
     
-        // Map to track pointers to variable names
+        // Map pointers to source variable names
         std::map<Value*, std::string> pointerToVarName;
-        
+    
         // Data structures for analysis
         std::map<BasicBlock*, std::set<std::string>> UEVAR;
         std::map<BasicBlock*, std::set<std::string>> VARKILL;
         std::map<BasicBlock*, std::set<std::string>> LIVEOUT;
     
-        // Step 1: Map pointers to variable names
+        // Step 1: Map pointers to variable names (from Alloca)
         for (auto& basicBlock : fn) {
             for (auto& instruction : basicBlock) {
-                // Track pointers created by alloca (e.g., int a, b, c, e)
                 if (auto* allocaInst = dyn_cast<AllocaInst>(&instruction)) {
                     if (allocaInst->hasName()) {
+                        // Map pointer (alloca) to variable name
                         pointerToVarName[allocaInst] = allocaInst->getName().str();
                     }
                 }
@@ -67,18 +67,20 @@ namespace {
                     Value* storedValue = storeInst->getValueOperand();
                     Value* pointer = storeInst->getPointerOperand();
     
-                    // If the pointer is a named variable
+                    // Check if the pointer is a known variable
                     if (pointerToVarName.find(pointer) != pointerToVarName.end()) {
                         std::string varName = pointerToVarName[pointer];
                         varkillSet.insert(varName);
                     }
     
-                    // Check if the stored value is a named variable (UEVAR case)
-                    if (storedValue->hasName()) {
-                        std::string varName = storedValue->getName().str();
-                        // Only UEVAR if not killed in this block
-                        if (varkillSet.find(varName) == varkillSet.end()) {
-                            uevarSet.insert(varName);
+                    // Check if the stored value is from a variable (UEVAR case)
+                    if (auto* loadInst = dyn_cast<LoadInst>(storedValue)) {
+                        Value* loadedPointer = loadInst->getPointerOperand();
+                        if (pointerToVarName.find(loadedPointer) != pointerToVarName.end()) {
+                            std::string varName = pointerToVarName[loadedPointer];
+                            if (varkillSet.find(varName) == varkillSet.end()) {
+                                uevarSet.insert(varName);
+                            }
                         }
                     }
                 }
@@ -113,7 +115,7 @@ namespace {
     
                     // LIVEOUT = (LIVEOUT - VARKILL) U UEVAR
                     std::set<std::string> tempOut = LIVEOUT[succBlock];
-                    
+    
                     // Remove VARKILL
                     for (auto v : VARKILL[succBlock]) {
                         tempOut.erase(v);
